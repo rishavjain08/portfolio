@@ -1,0 +1,11 @@
+import puppeteer from "puppeteer";
+const b = await puppeteer.launch({ headless:true, args:["--enable-unsafe-swiftshader","--use-gl=angle","--use-angle=swiftshader","--no-sandbox"] });
+const p = await b.newPage();
+await p.setViewport({ width:1440, height:900 });
+await p.goto("http://localhost:5173/", { waitUntil:"networkidle0" });
+await new Promise(r=>setTimeout(r,2000));
+const projTop = await p.evaluate(()=>document.querySelector("#projects").getBoundingClientRect().top + window.scrollY);
+console.log("  projects section starts at scrollY =", Math.round(projTop));
+console.log("  hero timeline ends at   scrollY =", 900 * 1.2, "(1.2 viewports)");
+console.log("  ->", projTop >= 900*1.2 ? "timeline completes before Projects begins" : "OVERLAP");
+await b.close();

@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --color-stage: #0f0f12;
+  --color-nebula-in: #0a1a3a;
+  --color-nebula-out: #02040a;
+  --color-bright: #cfe6f5;
+  --color-muted: #8fa6bc;
+
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-stage);
+  color: var(--color-bright);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* Visible focus for keyboard users. Never removed. */
+:focus-visible {
+  outline: 2px solid var(--color-bright);
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Orbit rotation for the Arsenal rings. Each ring spins at its own rate and the
+   chips counter-spin at the same rate, so labels stay upright while orbiting. */
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

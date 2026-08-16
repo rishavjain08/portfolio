@@ -1,0 +1,21 @@
+import puppeteer from "puppeteer";
+const b = await puppeteer.launch({ headless:true, args:["--enable-unsafe-swiftshader","--use-gl=angle","--use-angle=swiftshader","--no-sandbox"] });
+const p = await b.newPage();
+const msgs = [];
+p.on("console", m => { if (m.type()==="error"||m.type()==="warning") msgs.push(`${m.type()}: ${m.text()}`); });
+p.on("pageerror", e => msgs.push(`pageerror: ${e}`));
+await p.setViewport({ width:1440, height:900 });
+await p.goto("http://localhost:5173/", { waitUntil:"networkidle0" });
+await p.evaluate(()=>document.querySelector("#projects")?.scrollIntoView({block:"start"}));
+await new Promise(r=>setTimeout(r,1500));
+// simulate a wheel over the rail
+const ul = await p.$("#projects ul");
+const box = await ul.boundingBox();
+await p.mouse.move(box.x + box.width/2, box.y + box.height/2);
+await p.mouse.wheel({ deltaY: 300 });
+await new Promise(r=>setTimeout(r,800));
+const left = await p.evaluate(()=>document.querySelector("#projects ul").scrollLeft);
+console.log("  rail scrollLeft after wheel:", Math.round(left), left>0 ? "(wheel-to-horizontal works)" : "(NOT working)");
+console.log(msgs.length ? "  messages:" : "  no console errors or warnings");
+msgs.slice(0,5).forEach(m=>console.log("   ", m.slice(0,150)));
+await b.close();
