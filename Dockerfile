@@ -39,79 +39,12 @@ FROM nginx:1.29-alpine AS serve
 # well known source of surprises and buys nothing here.
 COPY --from=build /app/dist /usr/share/nginx/html/portfolio
 
-COPY <<'NGINX' /etc/nginx/conf.d/default.conf
-server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-
-    # This server sits behind another nginx, so a redirect must not name this
-    # container's own host or port. Relative Location headers keep the client
-    # pointed at the public origin.
-    absolute_redirect off;
-    port_in_redirect off;
-
-    # The three chunk is ~1.1MB raw and ~300KB gzipped, so this is the single
-    # biggest thing nginx can do for first load. gltf and the model's .bin are
-    # listed explicitly because they are not in nginx's default type list.
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied any;
-    gzip_types
-        text/plain
-        text/css
-        text/javascript
-        application/javascript
-        application/json
-        application/wasm
-        image/svg+xml
-        model/gltf+json
-        application/octet-stream;
-
-    # Vite fingerprints everything under assets/, so the filename changes
-    # whenever the contents do and these can be cached indefinitely.
-    location /portfolio/assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files $uri =404;
-    }
-
-    # The model is not fingerprinted, so it gets a long but revalidated cache
-    # rather than an immutable one.
-    location /portfolio/models/ {
-        expires 30d;
-        add_header Cache-Control "public";
-        try_files $uri =404;
-    }
-
-    # index.html is the one file that must never be cached: it is what points at
-    # the current fingerprinted bundles, and a stale copy pins the browser to a
-    # deployment that no longer exists.
-    location = /portfolio/index.html {
-        add_header Cache-Control "no-cache";
-    }
-
-    # /portfolio with no trailing slash would otherwise 404, since the fallback
-    # below only matches the prefix with one.
-    location = /portfolio {
-        return 301 /portfolio/;
-    }
-
-    # Single page: anything unrecognised under the prefix falls back to the app
-    # rather than 404ing.
-    location /portfolio/ {
-        try_files $uri $uri/ /portfolio/index.html;
-    }
-
-    # Nothing else is served. If a request arrives without the prefix, the proxy
-    # in front is misconfigured, and a 404 says so plainly rather than quietly
-    # serving the app from a second path.
-    location / {
-        return 404;
-    }
-}
-NGINX
+# The server config lives in its own file rather than in a heredoc here.
+# Heredocs require BuildKit, and Docker's legacy builder fails on them with
+# "COPY failed: no source files were specified". A plain COPY builds on any
+# builder, which matters when the image is built on a server rather than on a
+# workstation with buildx installed.
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
