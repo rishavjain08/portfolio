@@ -5,7 +5,7 @@ import { ScrollHint } from "./ScrollHint";
 type Props = {
   /** Coarse progress, derived from bucketed state rather than the raw ref. */
   p: number;
-  compact: boolean;
+  reduced: boolean;
 };
 
 /**
@@ -16,7 +16,7 @@ type Props = {
  * crawlers. The sr-only heading below is the only machine-readable copy of the
  * name and role in the hero, so it stays whether or not anything is drawn.
  */
-export function Overlay({ p, compact }: Props) {
+export function Overlay({ p, reduced }: Props) {
   return (
     <>
       <section id="hero-copy" aria-label="Introduction">
@@ -47,7 +47,7 @@ export function Overlay({ p, compact }: Props) {
         }}
       />
 
-      {!compact ? <ScrollHint opacity={scrollHintOpacityAt(p)} /> : null}
+      {!reduced ? <ScrollHint opacity={scrollHintOpacityAt(p)} /> : null}
     </>
   );
 }

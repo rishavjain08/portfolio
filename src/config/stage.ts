@@ -137,6 +137,7 @@ export const MODEL_RAW = {
   /** Panel centre, in lid-local space, measured from the hinge. */
   panelLocal: { y: (0.058 + 0.425) / 2, z: 0.006 },
   panelHeight: 0.425 - 0.058,
+  panelWidth: 0.448,
 } as const;
 
 /** Scale the model so its base matches the procedural chassis width. */
@@ -154,6 +155,7 @@ export const MODEL = {
     z: MODEL_RAW.panelLocal.z * MODEL_SCALE,
   },
   panelHeight: MODEL_RAW.panelHeight * MODEL_SCALE,
+  panelWidth: MODEL_RAW.panelWidth * MODEL_SCALE,
   /**
    * The model is authored with the lid open and vertical, so its rest pose is
    * our "90 degrees". rotation.x = +90deg folds it shut; a 105deg open lid is
@@ -198,26 +200,64 @@ function panelCentre() {
 
 export const PANEL_CENTRE = panelCentre();
 export const PANEL_HEIGHT = active ? active.panelHeight : PROCEDURAL.panel.h;
+export const PANEL_WIDTH = active ? active.panelWidth : PROCEDURAL.panel.w;
 
 /** Field of view once the camera has pushed all the way in. */
 export const SCREEN_FOV = 32;
 
 /**
- * How much of the frame height the display occupies at the end of the dolly.
- * At 0.6 the whole machine stays in shot, bezel and base included, so the zoom
- * reads as closing in on a laptop rather than becoming a full-bleed slide.
+ * How much of the frame the display occupies at the end of the dolly.
+ *
+ * Separate fractions per axis, because the two axes want different things. At
+ * 0.6 of the height the whole machine stays in shot on a wide screen, so the
+ * zoom reads as closing in on a laptop rather than becoming a full-bleed slide.
+ * A portrait phone is width-bound instead, and holding it to 0.6 there left the
+ * end of the dolly no larger than its start: the chassis and the panel are
+ * nearly the same width, so fitting either to the same fraction lands the
+ * camera in the same place. Letting the panel span the full width on portrait
+ * restores the push in.
  */
-export const SCREEN_FILL = 0.6;
+export const SCREEN_FILL = { h: 0.6, w: 1.0 };
+
+/** Same, for the whole chassis before the dolly starts. */
+export const CHASSIS_FILL = { h: 0.72, w: 0.72 };
 
 /**
- * Standoff needed for the panel to exactly fill a SCREEN_FOV frame.
- * Solving half-height / tan(half-fov) rather than eyeballing the z value.
+ * Distance at which a subject of the given half extents fits `fill` of the
+ * frame, in BOTH axes.
+ *
+ * The two-axis part is the whole point. Every camera distance here used to be
+ * solved from height alone, which is correct only while the viewport is wider
+ * than the subject. A perspective camera's vertical fov is fixed and the
+ * horizontal one follows the aspect, so on a portrait phone the horizontal
+ * angle collapses and a subject that fits vertically is cut off at the sides.
+ * At 390x844 the panel needed 14.5 units of standoff and was given 3.9, which
+ * is why the display read as a cropped fragment rather than as a screen.
+ *
+ * Taking the max means the tighter axis wins and the subject always fits.
  */
-const SCREEN_STANDOFF_FULL = PANEL_HEIGHT / 2 / Math.tan((SCREEN_FOV / 2) * DEG);
+export function fitDistance(
+  halfWidth: number,
+  halfHeight: number,
+  fovDeg: number,
+  aspect: number,
+  fill: { h: number; w: number },
+) {
+  const t = Math.tan((fovDeg / 2) * DEG);
+  const byHeight = halfHeight / (t * fill.h);
+  const byWidth = halfWidth / (t * aspect * fill.w);
+  return Math.max(byHeight, byWidth);
+}
 
-/**
- * Standoff for SCREEN_FILL of the frame. Pulling back scales the panel down
- * inversely, so dividing by the fill fraction is exact: at 0.75 the camera sits
- * 4/3 as far out and the display covers three quarters of the height.
- */
-export const SCREEN_STANDOFF = SCREEN_STANDOFF_FULL / SCREEN_FILL;
+/** Standoff from the panel centre for the end of the dolly, at this aspect. */
+export function screenStandoff(aspect: number) {
+  return fitDistance(PANEL_WIDTH / 2, PANEL_HEIGHT / 2, SCREEN_FOV, aspect, SCREEN_FILL);
+}
+
+/** Distance needed for the whole chassis to be in shot, at this aspect. */
+export function chassisDistance(fovDeg: number, aspect: number) {
+  // Depth counts towards the vertical extent once the lid is up: the machine is
+  // taller than it is deep, so the lid height is the binding half-extent.
+  const halfHeight = (PROCEDURAL.lid.h + PROCEDURAL.base.h) / 2;
+  return fitDistance(PROCEDURAL.base.w / 2, halfHeight, fovDeg, aspect, CHASSIS_FILL);
+}

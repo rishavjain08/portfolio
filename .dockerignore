@@ -15,6 +15,10 @@ tools
 Dockerfile
 .dockerignore
 
+# Host nginx config. Applies to the machine in front of the container, never to
+# anything inside it.
+deploy
+
 .git
 .gitignore
 

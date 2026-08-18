@@ -18,9 +18,14 @@ function useMediaQuery(query: string) {
 }
 
 /**
- * Compact mode drops the scroll scrub and the heavy 3D entirely: small screens
- * and anyone who has asked for reduced motion get a static poster frame plus
- * the same text, revealed on load.
+ * Two separate questions, deliberately not one flag.
+ *
+ * `reduced` is a request not to animate, so it parks the scene on a poster
+ * frame. `isSmall` is a small screen, which is a reason to render more cheaply
+ * but not a reason to withhold the hero: the scroll-driven laptop is the page,
+ * and phones were being handed a single cropped still of it instead.
+ *
+ * `compact` is kept as the union for the poster-frame decision only.
  */
 export function useCompactMode() {
   const isSmall = useMediaQuery("(max-width: 767px)");

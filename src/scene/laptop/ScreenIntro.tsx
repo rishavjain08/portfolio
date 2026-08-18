@@ -28,11 +28,17 @@ const PANEL = PROCEDURAL.panel;
  * is a straight trade of sharpness at the end of the dolly against per-frame
  * bandwidth. 1536 matches the greeting's texture and holds up at full zoom.
  */
-const TEX_W = 1536;
-const TEX_H = Math.round(TEX_W * (PANEL.h / PANEL.w));
+const TEX_W_DEFAULT = 1536;
+
+/**
+ * Phones get a smaller one. The whole texture is re-uploaded every frame, and
+ * on a device whose panel is a few hundred CSS pixels wide, 1536 is texels
+ * nobody can see paid for in bandwidth every frame.
+ */
+const TEX_W_SMALL = 1024;
 
 export function ScreenIntro({ progress }: { progress: React.RefObject<number> }) {
-  const { compact } = useCompactMode();
+  const { reduced, isSmall } = useCompactMode();
   const mesh = useRef<THREE.Mesh>(null);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
 
@@ -48,17 +54,20 @@ export function ScreenIntro({ progress }: { progress: React.RefObject<number> })
   const painted = useRef(-1);
 
   const { texture, film } = useMemo(() => {
+    const w = isSmall ? TEX_W_SMALL : TEX_W_DEFAULT;
+    const h = Math.round(w * (PANEL.h / PANEL.w));
+
     const canvas = document.createElement("canvas");
-    canvas.width = TEX_W;
-    canvas.height = TEX_H;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d");
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
 
-    return { texture: tex, film: ctx ? createIntroFilm(ctx, TEX_W, TEX_H) : null };
-  }, []);
+    return { texture: tex, film: ctx ? createIntroFilm(ctx, w, h) : null };
+  }, [isSmall]);
 
   /**
    * Canvas measures text against whatever face is resolved at draw time, so a
@@ -106,11 +115,12 @@ export function ScreenIntro({ progress }: { progress: React.RefObject<number> })
     if (!film) return;
 
     /**
-     * Compact mode parks the scene on a poster frame and runs the canvas on
+     * Reduced motion parks the scene on a poster frame and runs the canvas on
      * demand, so there is no clock to advance and nothing would move. Park the
      * film on its closing lockup instead, which is the frame the poster wants.
+     * Phones are not included: they play it like anything else.
      */
-    if (compact) {
+    if (reduced) {
       if (painted.current !== INTRO_DURATION) {
         film.render(INTRO_DURATION);
         texture.needsUpdate = true;

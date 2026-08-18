@@ -13,7 +13,8 @@ import {
   LID_SQUARE,
   PANEL_CENTRE,
   SCREEN_FOV,
-  SCREEN_STANDOFF,
+  chassisDistance,
+  screenStandoff,
 } from "../config/stage";
 import { easeInOutCubic, lerp, range, smoothstep } from "./math";
 
@@ -51,36 +52,60 @@ const REST: CameraState = { x: 0, y: 3.4, z: 5.2, fov: 45 };
 const FRONT: CameraState = { x: 0, y: 0.55, z: 4.6, fov: 45 };
 
 /**
- * Derived, not tuned: SCREEN_STANDOFF is the distance at which the panel covers
- * SCREEN_FILL of the frame height. The dolly stops short of a full-bleed screen,
- * so the bezel stays in shot and it still reads as a laptop.
+ * Every distance below is solved against the live viewport aspect rather than
+ * fixed.
+ *
+ * The tuned z values above frame the machine on a wide screen and nowhere else.
+ * A perspective camera's vertical fov is constant and its horizontal fov falls
+ * with the aspect ratio, so on a portrait phone the same z shows barely 1.0
+ * units of half-width against a chassis half-width of 1.2 and the laptop is
+ * cut off at both edges from the first frame. `chassisDistance` and
+ * `screenStandoff` return what each phase actually needs at this aspect; the
+ * tuned values act as a floor, so a wide viewport keeps exactly the framing it
+ * had and only narrow ones pull back.
  */
-const SCREEN: CameraState = {
-  x: 0,
-  y: PANEL_CENTRE.y,
-  z: PANEL_CENTRE.z + SCREEN_STANDOFF,
-  fov: SCREEN_FOV,
-};
+function keyframes(aspect: number) {
+  const rest: CameraState = {
+    ...REST,
+    z: Math.max(REST.z, chassisDistance(REST.fov, aspect)),
+  };
+  const front: CameraState = {
+    ...FRONT,
+    z: Math.max(FRONT.z, chassisDistance(FRONT.fov, aspect)),
+  };
+  const screen: CameraState = {
+    x: 0,
+    y: PANEL_CENTRE.y,
+    z: PANEL_CENTRE.z + screenStandoff(aspect),
+    fov: SCREEN_FOV,
+  };
+  return { rest, front, screen };
+}
 
-export function cameraAt(p: number): CameraState {
-  if (p < PHASES.open[0]) return { ...REST };
+/** Default aspect, used when a caller has no viewport to hand. */
+const DEFAULT_ASPECT = 16 / 9;
+
+export function cameraAt(p: number, aspect: number = DEFAULT_ASPECT): CameraState {
+  const { rest, front, screen } = keyframes(aspect);
+
+  if (p < PHASES.open[0]) return { ...rest };
 
   if (p < PHASES.open[1]) {
     const t = easeInOutCubic(range(p, PHASES.open[0], PHASES.open[1]));
     return {
-      x: lerp(REST.x, FRONT.x, t),
-      y: lerp(REST.y, FRONT.y, t),
-      z: lerp(REST.z, FRONT.z, t),
-      fov: lerp(REST.fov, FRONT.fov, t),
+      x: lerp(rest.x, front.x, t),
+      y: lerp(rest.y, front.y, t),
+      z: lerp(rest.z, front.z, t),
+      fov: lerp(rest.fov, front.fov, t),
     };
   }
 
   const t = easeInOutCubic(range(p, PHASES.dolly[0], PHASES.dolly[1]));
   return {
-    x: lerp(FRONT.x, SCREEN.x, t),
-    y: lerp(FRONT.y, SCREEN.y, t),
-    z: lerp(FRONT.z, SCREEN.z, t),
-    fov: lerp(FRONT.fov, SCREEN.fov, t),
+    x: lerp(front.x, screen.x, t),
+    y: lerp(front.y, screen.y, t),
+    z: lerp(front.z, screen.z, t),
+    fov: lerp(front.fov, screen.fov, t),
   };
 }
 

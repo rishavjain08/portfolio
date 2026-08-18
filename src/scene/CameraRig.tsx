@@ -9,12 +9,15 @@ import { cameraAt, lookAtAt } from "../lib/timeline";
  * Three.js property itself.
  */
 export function CameraRig({ progress }: { progress: React.RefObject<number> }) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const target = useRef(new THREE.Vector3());
 
   useFrame(() => {
     const p = progress.current ?? 0;
-    const c = cameraAt(p);
+    // Aspect drives the framing: the same z crops the laptop on a portrait
+    // phone that frames it comfortably on a desktop. Read per frame so a device
+    // rotation or a resize reframes without a remount.
+    const c = cameraAt(p, size.width / size.height);
     const look = lookAtAt(p);
 
     camera.position.set(c.x, c.y, c.z);
