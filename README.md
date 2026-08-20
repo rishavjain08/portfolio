@@ -18,8 +18,8 @@ No environment variables. The laptop model is committed under `public/models/`.
 `src/config/content.ts` — four lines:
 
 ```ts
-brand: "RISHAV",
-name:  "Rishav Jain",
+brand: "RISHAVV",
+name:  "Rishavv Jain",
 role:  "a full-stack developer",
 city:  "Gurugram",
 ```

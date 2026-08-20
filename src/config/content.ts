@@ -1,7 +1,7 @@
 /** Copy. Edit these four lines and the page is yours. */
 export const content = {
-  brand: "RISHAV",
-  name: "Rishav Jain",
+  brand: "RISHAVV",
+  name: "Rishavv Jain",
   role: "a full-stack developer",
   city: "Gurugram",
 } as const;
